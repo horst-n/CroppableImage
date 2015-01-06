@@ -1,0 +1,143 @@
+body.modal, #content {
+    margin: 0;
+    padding: 0;
+    background: #444;
+}
+
+#content .container {
+    max-width: none;
+}
+
+#hd {
+    background: white;
+    border-bottom: 1px solid #222;
+    overflow: hidden;
+    box-shadow: 0 0 6px #000;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    z-index: 9999;
+    padding: 20px;
+    /*position: relative;*/
+}
+
+#hd p {
+    margin: 0;
+
+    margin-right: 200px;
+}
+
+#hd form {
+    /*float: right;*/
+    /*padding: 20px;*/
+    position: absolute;
+    right: 20px;
+    height: 1em;
+    top: 0.8em;
+}
+
+#hd form label {
+    margin-left: 4px;
+    margin-right: 8px;
+}
+
+#hd form .ui-button {
+    margin: 0;
+    display: inline;
+    vertical-align: middle;
+    margin-left: 1em;
+}
+
+
+#bd {
+    clear: both;
+    margin: 10px;
+    margin-top: 70px;
+    position: relative;
+}
+
+#preview-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    border: 1px solid white;
+    border-color: rgba(255,255,255,0.5);
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    z-index: 9998;
+    -webkit-transition: transform 0.3s, opacity 0.3s, border 0.3s, box-shadow 0.3s;
+    -o-transition: transform 0.3s, opacity 0.3s, border 0.3s, box-shadow 0.3s;
+    transition: transform 0.3s, opacity 0.3s, border 0.3s, box-shadow 0.3s;
+}
+
+#preview-container.is-zoomable {
+    cursor: zoom-in;
+    box-shadow: 0 0 120px rgba(0,0,0,0.5);
+    border-width: 4px;
+}
+
+#preview-container.is-zoomable.is-zoomed {
+    cursor: zoom-out;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    border-width: 1px;
+}
+
+.hide {
+    opacity: 0;
+}
+
+#results {
+    text-align: center;
+    background: white;
+    padding: 50px 20px;
+}
+
+#results img {
+    margin: 0 auto;
+    max-width: 100%;
+}
+
+#results .ui-button {
+    margin: 0;
+}
+
+#bd {
+    text-align: center;
+}
+
+.jcrop-holder {
+    display: inline-block;
+}
+
+
+.jcrop-tracker:after {
+    font-size: 0.9em;
+    line-height: 1.4em;
+    background: rgba(0,0,0,0.5);
+    border-radius: 3px;
+    padding: 0 0.4em;
+    color: white;
+    display: block;
+    content: attr(data-size);
+
+    position: absolute;
+    white-space: nowrap;
+
+}
+
+.jcrop-holder div .jcrop-tracker:after {
+    left: 50%;
+    bottom: 50%;
+    margin-bottom: 0;
+    -webkit-transform: translateY(50%) translateX(-50%);
+    -ms-transform: translateY(50%) translateX(-50%);
+    -o-transform: translateY(50%) translateX(-50%);
+    transform: translateY(50%) translateX(-50%);
+}
+
+.jcrop-holder>.jcrop-tracker:after {
+    margin-top: 1em;
+    margin-left: 1em;
+}
+

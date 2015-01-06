@@ -1,0 +1,347 @@
+<?php
+
+class ProcessCroppableImage extends Process implements Module {
+
+
+    const ciVersion = 82;
+
+    /**
+     * Name used for the page created in the admin
+     */
+    const adminPageName = 'croppable-image';
+
+
+    static protected $sharpeningValues = array('none', 'soft', 'medium', 'strong');
+
+    // bool, if current user is allowed to use dropdown selects for quality and sharpening
+    protected $manualSelectionAllowed = false;
+
+
+
+    static public function getDefaultData() {
+        return array(
+            'crops' => ''
+        );
+    }
+
+
+
+    public function __construct() {
+        require_once(dirname(__FILE__) . '/../classes/CroppableImageKeepCoords.class.php');
+        require_once(dirname(__FILE__) . '/../classes/CroppableImageHelpers.class.php');
+        require_once(dirname(__FILE__) . '/../classes/CroppableImageCropSettings.class.php');
+        foreach(self::getDefaultData() as $key => $value) {
+            $this->$key = $value;
+        }
+    }
+
+
+
+    public function init() {
+        $this->manualSelectionAllowed = $this->getManualSelectionAllowed();
+    }
+
+
+
+    public static function getCroppableImageOptions() {
+        $defaultOptions = array(
+            'autoRotation' => true,
+            'upscaling' => true,
+            'cropping' => true,
+            'quality' => 90,
+            'sharpening' => 'soft',
+            'defaultGamma' => 2.0
+        );
+        $configOptions = wire('config')->imageSizerOptions;
+        if (!is_array($configOptions)) $configOptions = array();
+        $sessionOptions = wire('session')->CroppableImageOptions;
+        if (!is_array($sessionOptions)) $sessionOptions = array();
+        $res = array_merge($defaultOptions, $configOptions, $sessionOptions);
+        return $res;
+    }
+
+
+
+    protected function getManualSelectionAllowed() {
+        $res = ! (bool) CroppableImageHelpers::getGlobalConfigSetting('manualSelectionDisabled');
+        return $res;
+        // TODO 5 -c enhancement :add option on Fieldlevel for Quality & Sharpening
+    }
+
+
+
+    public function ___execute() {
+
+        $this->config->scripts->add($this->config->urls->ProcessCroppableImage . "scripts/ProcessCroppableImage.js");
+        $this->config->styles->add($this->config->urls->ProcessCroppableImage . "styles/ProcessCroppableImage.css");
+        $this->config->scripts->add($this->config->urls->ProcessCroppableImage . "scripts/Jcrop/js/jquery.Jcrop.min.js");
+        $this->config->styles->add($this->config->urls->ProcessCroppableImage . "scripts/Jcrop/css/jquery.Jcrop.css");
+
+        $this->setFuel('processHeadline', 'Croppable images');
+
+        $field = wire('sanitizer')->fieldName($this->input->get->field);
+
+        if (preg_match("/_repeater[0-9]+$/", $field)) {
+            $pages_id = (int) end(explode("_repeater", $field));
+            $field = str_replace("_repeater$pages_id", "", $field);
+        } else {
+            $pages_id = (int) $this->input->get->pages_id;
+        }
+
+        $filename = wire('sanitizer')->name($this->input->get->filename);
+        $height = (int) $this->input->get->height;
+        $width = (int) $this->input->get->width;
+        $suffix = wire('sanitizer')->name($this->input->get->suffix);
+
+        if ($pages_id < 0 || strlen($filename) < 3) {
+            $out = CroppableImageHelpers::getTemplate("jcrop", array(
+                "invalidFieldText" => $this->_("This page only works when you come from image field.")
+            ));
+            return $out->render();
+        }
+
+        $page = wire('pages')->get($pages_id);
+        if (0==$page->id) throw new WireException(__('Invalid Page-ID'));
+
+        if (!$page->editable()) throw new WirePermissionException('Not Editable');
+
+        $fieldValue = $page->get($field);
+        if (!$fieldValue || !$fieldValue instanceof Pageimages) throw new WireException("Invalid field");
+
+        $img = $page->$field->get('name=' . $filename);
+        if (!$img) throw new WireException("Invalid file");
+
+        $origWidth = $img->width;
+        $origHeight = $img->height;
+        $imageUrl = $img->url;
+
+        $options = self::getCroppableImageOptions();
+        $x1 = $y1 = $w = $h = 0;
+        $quality = $options['quality'];
+        $sharpening = $options['sharpening'];
+        $keepCoords = new CroppableImageKeepCoords($img, $suffix, $width, $height);
+        if ($keepCoords->read($x1, $y1, $w, $h, $quality, $sharpening)) {
+            // we got values from session or IPTC, now add them to the options after successful validation
+            $options['quality'] = is_integer($quality) && 0 < $quality && 101 > $quality ? $quality : $options['quality'];
+            $options['sharpening'] = ImageSizer::sharpeningValueStr($sharpening) == $sharpening ? $sharpening : $options['sharpening'];
+        }
+        unset($keepCoords);
+        $upscaling = false === $options['upscaling'] ? '0' : '1';
+
+        $out = CroppableImageHelpers::getTemplate("jcrop", array(
+            'applyCropText' => $this->_("Crop and go"),
+            'descriptionText' => sprintf(
+                $this->_('Click and drag the cropped area with your cursor. Cropped image will be resized to %s pixels'),
+                '<b id="ci-cropped-width">' . $width . '</b>x<b id="ci-cropped-height">' . $height . '</b>'
+            ),
+            'field' => $field,
+            'filename' => $filename,
+            'h' => $h,
+            'height' => $height,
+            'imageUrl' => $imageUrl,
+            'origHeight' => $origHeight,
+            'origWidth' => $origWidth,
+            'pages_id' => $pages_id,
+            'showPreviewText' => $this->_("Show Preview?"),
+            'suffix' => $suffix,
+            'upscaling' => $upscaling,
+            'w' => $w,
+            'width' => $width,
+            'x1' => $x1,
+            'y1' => $y1,
+            'sharpeningText' => $this->_("Sharpen"),
+            'sharpening' => $options['sharpening'],
+            'qualityText' => $this->_("Quality"),
+            'quality' => $options['quality'],
+            'manualSelectionAllowed' => ($this->manualSelectionAllowed ? '' : 'style="display:none"')
+        ));
+
+        return $out->render();
+    }
+
+
+
+    public function ___executeSave() {
+
+        /** Checklist: sanitation and validation of each post param
+        *
+        *   [x] - [x] pages_id
+        *   [x] - [x] field
+        *   [x] - [x] filename
+        *   [x] - [x] suffix
+        *   [x] - [ ] crop
+        *   [x] - [x] targetWidth
+        *   [x] - [x] targetHeight
+        *   [x] - [x] quality
+        *   [x] - [x] sharpening
+        */
+
+        // get page-id from post, sanitize, validate page and edit permission
+        $pages_id = intval($this->input->post->pages_id);
+        $page = wire('pages')->get($pages_id);
+        if (!$page->id) throw new WireException("Invalid page");
+        if (!$page->editable()) throw new WirePermissionException("Not Editable");
+
+        // get fieldname from post, sanitize and validate
+        $field = wire('sanitizer')->fieldName($this->input->post->field);
+        $fieldValue = $page->get($field);
+        if (!$fieldValue || !$fieldValue instanceof Pagefiles) throw new WireException("Invalid field");
+        $field = $fieldValue; unset($fieldValue);
+
+        // get filename from post, sanitize and validate
+        // !! filename is wrong typo, it returns only a basename !!   Should we change this through all files, including JS?
+        $filename = wire('sanitizer')->name($this->input->post->filename);
+        $img = $field->get('name=' . $filename);
+        if (!$img) throw new WireException("Invalid filename");
+
+        // get suffix from post, sanitize and validate
+        // we never will work with the original image, so we need a valid $suffix
+        $suffix = wire('sanitizer')->name($this->input->post->suffix);
+        if (!$suffix || strlen($suffix) == 0) throw new WireException("We have no Suffix");
+
+        // validate suffix against crop-names
+        $cropSettings = new CroppableImageCropSettings($field->field->cropSetting);
+        $cropSetting = $cropSettings->getCropSetting($suffix, $page->template->name);
+        if (!$cropSetting || !$cropSetting->isTemplateAllowed($page->template->name)) throw new WireException(sprintf($this->_("We have no valid Suffix (%s) or it's the wrong page-template (%s)!"), $suffix, $page->template->name));
+
+        // build the targetfilename and its URL
+        $basename = basename($img->basename, '.' . $img->ext) . '.-' . strtolower($suffix) . '.' . $img->ext;
+        $targetPath = $img->pagefiles->path() . $basename;
+        $targetUrl = $img->pagefiles->url() . $basename;
+
+        // get the merged imageoptions (default & config & session)
+        $options = self::getCroppableImageOptions();
+
+        // if user is allowed to use DropDown-Selects
+        if (true === $this->manualSelectionAllowed) {
+            // get quality & sharpening from post, sanitize and validate it
+            $quality = isset($this->input->post->quality) && is_numeric($this->input->post->quality) && 0<intval($this->input->post->quality) && 101>intval($this->input->post->quality) ? intval($this->input->post->quality) : $options['quality'];
+            $sharpening = isset($this->input->post->sharpening) && ImageSizer::sharpeningValueStr($this->input->post->sharpening)==$this->input->post->sharpening ? $this->input->post->sharpening : $options['sharpening'];
+        } else {
+            // if user is NOT allowed to use DropDown-Selects we use global settings from ModuleConfigPage or from ImageSizerOptions
+            $globalOptions = CroppableImageHelpers::getGlobalConfigSettings();
+            $quality = isset($globalOptions->optionQuality) ? $globalOptions->optionQuality : $options['quality'];
+            $sharpening = isset($globalOptions->optionSharpening) && isset(self::$sharpeningValues[$globalOptions->optionSharpening]) ? self::$sharpeningValues[$globalOptions->optionSharpening] : $options['sharpening'];
+            // TODO 5 -c enhancement :add option on Fieldlevel for Quality & Sharpening
+        }
+//$hn = new hn_basic();
+//$hn->my_var_dump(array($globalOptions, $this->manualSelectionAllowed, $quality, $sharpening), 1);
+//die();
+
+        // get target dimensions from post and sanitize
+        $targetWidth = intval($this->input->post->width);
+        $targetHeight = intval($this->input->post->height);
+        if ($targetWidth <> $cropSetting->width) throw new WireException("Invalid setting width");
+        if ($targetHeight <> $cropSetting->height) throw new WireException("Invalid setting height");
+
+        // get crop values from post and validate
+        $crop = $this->input->post->crop;
+        if (!is_array($crop) || 4!=count($crop)) throw new WireException("Invalid crop value");
+        foreach($crop as $k => $v) $crop[$k] = intval($v);
+        // check if upscaling is disallowed
+        if (!$options['upscaling'] && !($crop['w'] > $cropSetting->width || $crop['h'] > $cropSetting->height)) {
+            // both dimensions are to small, this is only by abuse or error
+            if ($crop['w'] < $cropSetting->width || $crop['h'] < $cropSetting->height) {
+                throw new WireException("To small settings for width and/or height!");
+            }
+# Maybe we need this again when deciding to support for PW 2.5.0+,
+# but actually during testing we require 2.5.7+ with the modules *.info.json files
+//            // one dimension is equal to the minimum, check if they have a PW version that does
+//            // not have the needed Fix: https://github.com/ryancramerdesign/ProcessWire/pull/727
+//            if (version_compare(wire('config')->version, '2.5.7', '<')) {
+//                if ($crop['x1'] > 0) {
+//                    $crop['x1'] -= 1;
+//                } elseif ($crop['y1'] > 0) {
+//                    $crop['y1'] -= 1;
+//                } else {
+//                    $crop['w'] += 1;
+//                }
+//            }
+        }
+        // ... ToDo: validate AspectRatio of $crop ??
+
+        // we use the core ImageSizer (or any hooked-in ImageEngine) for the complete image manipulation ('cropExtra' is available since PW 2.5.0)
+        $imOptions = array_merge($options,
+            array(
+                'forcenew'   => true, // must be always true! - Err, ... is only needed with Pageimage::size, not with ImageSizer, - stupid me!
+                'quality'    => $quality,
+                'sharpening' => $sharpening
+                )
+        );
+        if ($crop['w']>0 && $crop['h']>0) $imOptions['cropExtra'] = array($crop['x1'], $crop['y1'], $crop['w'], $crop['h']);
+
+        $newImg = CroppableImageHelpers::renderImage($this, $img, $img->filename(), $targetPath, $targetWidth, $targetHeight, $imOptions);
+
+// To fake a failed ImageSizer manipulation during development, uncomment the next line,
+// this enables to workout the styling for Errormessages in the ReviewScreen!
+#$this->error = sprintf($this->_("ImageSizer::resize(%s, %s) failed for %s.%s Click here to close the Editor!"), $targetWidth, $targetHeight, basename($targetPath), '<br />');
+
+        if ($this->error) {
+            $confirmCropText = sprintf($this->_('Uh! An Error has occured: %s'), $this->error);
+            $cropAgainText = $this->_('Do you want try it again?');
+        } else {
+            $confirmCropText = $this->_('Wow, that looks great!');
+            $cropAgainText = $this->_('Not happy? Crop again!');
+            // keep as session & permanent storage
+            $keepCoords = new CroppableImageKeepCoords($img, $suffix, $targetWidth, $targetHeight);
+            $keepCoords->write($crop['x1'], $crop['y1'], $crop['w'], $crop['h'], $quality, $sharpening);
+            unset($keepCoords);
+        }
+
+        // output for reviewing
+        $this->config->styles->add($this->config->urls->ProcessCroppableImage . "styles/ProcessCroppableImage.css");
+
+        $out = CroppableImageHelpers::getTemplate("review-crop", array(
+            'confirmCropText' => $confirmCropText,
+            'cropAgainText' => $cropAgainText,
+            'backToCropUrl' => '../?' . http_build_query(array(
+                'filename' => $filename,
+                'suffix' => $suffix,
+                'width' => $targetWidth,
+                'height' => $targetHeight,
+                'pages_id' => $pages_id,
+                'field' => $field->field->name,
+                'modal' => 1,
+                'quality' => $quality,
+                'sharpening' => $sharpening,
+            )),
+            'suffix' => $suffix,
+            'targetUrl' => $targetUrl . '?timestamp=' . time()
+        ));
+
+        return $out->render();
+    }
+
+
+
+    public function ___install() {
+        parent::___install();
+        $p = new Page();
+        $p->template = $this->templates->get("admin");
+        $p->parent = $this->pages->get(3);  // /admin/pages
+        $p->title = 'Croppable Images';
+        $p->name = self::adminPageName;
+        $p->process = $this;
+        $p->addStatus(Page::statusHidden);  // needed to not show it as link to blank page in the Pages-Menu
+        $p->save();
+    }
+
+
+
+    public function ___uninstall() {
+        if (!isset($GLOBALS['UNINSTALLROUTINE_RUNNING_CROPPABLEIMAGE']) || !in_array(__CLASS__, $GLOBALS['UNINSTALLROUTINE_RUNNING_CROPPABLEIMAGE'])) {
+            throw new WireException("Please only use FieldtypeCroppableImage to uninstall CroppableImage modules!");
+        }
+        parent::___uninstall();
+
+        // $moduleID = $this->modules->getModuleID($this);
+        // $page = $this->pages->get("template=admin, process=$moduleID, name=" . self::adminPageName);
+
+        $p = $this->pages->get(3)->children('include=hidden')->get('name=' . self::adminPageName);
+        if ($p->id) $p->delete();
+
+        $p = $this->permissions->get('image-crop');
+        if ($p->id) $p->delete();
+    }
+
+}

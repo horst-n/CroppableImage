@@ -1,0 +1,305 @@
+<?php
+
+class InputfieldCroppableImage extends InputfieldImage {
+
+
+    const ciVersion = 82;
+
+
+    public function __construct() {
+        parent::__construct();
+        require_once(dirname(__FILE__) . '/../classes/CroppableImageCropSettings.class.php');
+        require_once(dirname(__FILE__) . '/../classes/CroppableImageHelpers.class.php');
+    }
+
+
+
+    public function init() {
+        parent::init();
+        // default settings
+        $this->set('cropSetting', '');
+    }
+
+
+
+    public function ___render() {
+        $this->config->scripts->add($this->config->urls->InputfieldImage . "InputfieldImage.js");
+        $this->config->styles->add($this->config->urls->InputfieldImage . "InputfieldImage.css");
+
+        $cropSettings = new CroppableImageCropSettings($this->cropSetting);
+
+        $page = $this->pages->get((int) $this->input->get->id);
+        if (!$page->id || !$page->editable()) throw new WirePermissionException();
+
+        $out = '';
+        if ($this->user->isSuperuser()) {
+        }
+        return $out . parent::___render() . "";
+    }
+
+
+
+    /**
+     * Add adminThumbs class to InputfieldFileItem
+     *
+     */
+    protected function renderItemWrap($out) {
+        $adminThumb = $this->adminThumbs ? ' adminThumb' : ' fullImage';
+        return     "<li class='{$this->itemClass}{$adminThumb}'>$out</li>";
+    }
+
+
+
+    /**
+     * Extended getAdminThumb information
+     *
+     * @var $img PageImage
+     * @return array
+     *
+     */
+    public function getAdminThumbCroppable(PageImage $img) {
+
+        // get thumbnail information
+        $x = 4;
+        $y = 3;
+
+        $info = $this->getAdminThumb($img);
+        $thumb = $info['thumb'];
+        $attr = $info['attr'];
+        $orientation = $thumb->height() > $thumb->width() ? 'portrait' : 'landscape';
+        $orientation = $thumb->height() ==  $thumb->width() ? 'square' : $orientation;
+
+        $info['attr']['class'] = 'base-image ' . $orientation;
+
+        // CSS sizes
+        if (isset($attr['width']) && isset($attr['height'])) {
+            $width = $attr['width'];
+            $height = $attr['height'];
+        } else if (isset($attr['width']) && !isset($attr['height'])) {
+            $width = $attr['width'];
+            $height = ceil($width * $y / $x);
+        } else if (isset($attr['height']) && !isset($attr['width'])) {
+            $height = $attr['height'];
+            $width = ceil($height / $y * $x);
+        }
+
+        // when $this->adminThumbs === 0 (sizes needed for grid view)
+        if (!$this->adminThumbs) {
+            $info['attr']['data-grid-x'] = ceil($this->gridSize / $y * $x);
+            $info['attr']['data-grid-y'] = $this->gridSize;
+        } else {
+            $info['attr']['data-grid-x'] = $width;
+            $info['attr']['data-grid-y'] = $height;
+        }
+
+        $info['attr']['data-gridsize'] = isset($width) ? $width : $info['attr']['data-grid-x'];
+
+        $array = array(
+            'orientation' => $orientation,
+            'linkCSS' => $this->adminThumbs ? " style='width: {$width}px;'" : '',
+            'dataCSS' => $this->adminThumbs ? " style='margin-left: {$width}px; min-height: {$height}px'" : '',
+        );
+
+        return array_merge($info, $array);
+    }
+
+
+
+    /**
+     * Render individual Pageimage (main markup)
+     *
+     * @var $thumb (Pagefile)
+     * @var $id (string) indentifier of the Pagefile
+     * @var $n (integer) order of the file stored in the field
+     *
+     */
+    protected function ___renderItem($pagefile, $id, $n) {
+
+        // Get Admin Thumbnail
+        $AdminThumb = $this->getAdminThumbCroppable($pagefile);
+
+        return "<p class='InputfieldFileInfo InputfieldItemHeader ui-widget ui-widget-header'>" .
+            "<span data-id='$id' class='editCropItem'><i class='fa fa-pencil'></i> " . $this->_('Edit') . "</span>" .
+            "<span class='InputfieldFileName'>{$pagefile->basename}</span>" .
+            "<span class='InputfieldFileStats stats-seperator'> &bull; </span>" .
+            "<span class='InputfieldFileStats stats-filesize'>{$pagefile->filesizeStr}</span>" .
+            "<span class='InputfieldFileStats stats-seperator'> &bull; </span>" .
+            "<span class='InputfieldFileStats stats-dimensions'>{$pagefile->width}×{$pagefile->height}</span>" .
+            "<label class='InputfieldFileDelete'>" .
+                "<input type='checkbox' name='delete_{$id}' value='1' />" .
+                "<i class='fa fa-trash'></i>" .
+            "</label>" .
+            "<a class='InputfieldFileMove InputfieldFileMoveBottom' href='#' title='" . $this->_('Move to bottom') . "'>" .
+                "<i class='fa fa-chevron-down'></i>" .
+            "</a>" .
+            "<a class='InputfieldFileMove InputfieldFileMoveTop' href='#' title='" . $this->_('Move to top') . "'>" .
+                "<i class='fa fa-chevron-up'></i>" .
+            "</a> " .
+        "</p>" .
+        // ugly hack to make left aligned thumbs & delete collapse possible
+        ($this->adminThumbs ? "<div class='CroppableImageContainer InputfieldFileData' >" : '') .
+            "<a class='InputfieldFileLink InputfieldFileData' target='_blank' href='{$pagefile->url}'" . $AdminThumb['linkCSS'] . ">" .
+                "<img " . $this->arrayToAttr($AdminThumb['attr']) . " alt='$pagefile->description' />" .
+            "</a>" .
+            "<div class='InputfieldFileData ui-widget ui-widget-content'" . $AdminThumb['dataCSS'] . ">" .
+                ($AdminThumb['error'] ? "<span class='ui-state-error-text'>" . $this->wire('sanitizer')->entities($thumb['error']) . "</span>" : "") .
+                $this->renderItemDescriptionField($pagefile, $id, $n) .
+                $this->getCropLinks($pagefile) .
+                "<input class='InputfieldFileSort' type='text' name='sort_{$id}' value='{$n}' />" .
+            "</div>" .
+        ($this->adminThumbs ? "</div>" : '');
+    }
+
+
+
+    /**
+     * Returns the croplinks HTML string or boolean false. Depending on field
+     * configuration.
+     *
+     * @param Pagefile $pagefile
+     * @return mixed (string|bool false)
+     *
+     */
+    private function getCropLinks($pagefile){
+
+        $cropSettings = new CroppableImageCropSettings($this->cropSetting);
+
+        // no crops, no glory
+        if (!count($cropSettings->items)) return false;
+
+        $baseCropUrl    = $this->config->urls->admin . "page/" . ProcessCroppableImage::adminPageName . "/";
+        $upscaling      = CroppableImageHelpers::getGlobalImageSetting('upscaling');  // setting 1x holen reicht :)
+        $templateName = $pagefile->page->template->name;
+        $imageWidth = $pagefile->width;
+        $imageHeight = $pagefile->height;
+        $adminThumb = $this->getAdminThumbCroppable($pagefile);
+        $jsCropInfo = array();
+        $out = '';
+
+        foreach($cropSettings->items as $cropSetting) {
+
+            if (!$cropSetting->isTemplateAllowed($templateName)) continue;
+
+            $warning = false;
+            $suffix = $this->sanitizer->name($cropSetting->name);
+            $imageTooSmall = $cropSetting->width > $imageWidth || $cropSetting->height > $imageHeight;
+
+            // Upscaling not allowed ($config setting)
+            if ($imageTooSmall && $upscaling === false) {
+                $warning = sprintf($this->_('This crop setting (%s) is larger than the source image (%s) and upscaling is not allowed.'),
+                    "{$cropSetting->width}x{$cropSetting->height}",
+                    "{$imageWidth}x{$imageHeight}");
+            }
+
+            // CropUrl with additional parameters
+            $cropUrlWithParams = $baseCropUrl . '?' . http_build_query(array(
+                'filename' => $pagefile->basename,
+                'suffix' => $suffix,
+                'width' => $cropSetting->width,
+                'height' => $cropSetting->height,
+                'pages_id' => (int) $this->input->get->id,
+                'field' => $this->name,
+                'modal' => 1
+                ));
+
+            // HTML attributes
+            $attr = array('data-suffix' => $suffix);
+
+            // Upscaling not allowed ($config setting)
+            if ($warning) {
+                $attr['data-croppable'] = 0;
+                $attr['class'] = 'crop-button ui-state-error';
+                $attr['data-warning'] = $warning;
+            } else {
+                $attr['data-croppable'] = 1;
+                $attr['class'] = 'crop-button ui-button';
+                $attr['href'] = $cropUrlWithParams;
+                $attr['target'] = '_blank';
+                $attr['data-image'] = $pagefile->getCrop($suffix)->url;
+                $attr['data-width'] = $cropSetting->width;
+            }
+
+            // Dimensions per crop
+            $jsCropInfo['crops'][$suffix] = array(
+                'width' => $cropSetting->width,
+                'height' => $cropSetting->height,
+                );
+
+            $out .= "<a " . $this->arrayToAttr($attr) . ">";
+            $out .= "<i class='fa "  . ($warning ? 'fa-exclamation-circle' : 'fa-crop') . "'></i> ";
+
+
+
+            $out .= "<span>";
+            $out .= $cropSetting->name;
+            $out .= "</span> ";
+            $out .= "</a>";
+
+        }
+
+        // translatable
+        $jsCropInfo['text'] = array(
+            'edit' => $this->_('edit'),
+            'empty_fields' => $this->_('Some input fields are empty')
+        );
+
+        $jsCropInfo['grid'] = array(
+            'x' => $adminThumb['attr']['data-grid-x'],
+            'y' => $adminThumb['attr']['data-grid-y'],
+        );
+
+        $this->config->js('CroppableImage', $jsCropInfo);
+
+        return $out ? "<div class='cropLinks'>{$out}</div>" : false;
+    }
+
+
+
+    /**
+     * Helper method: Array to HTML attributes string
+     *
+     * @param (array) $array, key value pair array
+     * @return (string)
+     *
+     */
+    public function arrayToAttr($array) {
+        if (!count($array)) return '';
+        $out = '';
+        foreach ($array as $key => $value) $out .= $key . "='{$value}' ";
+        return trim($out);
+    }
+
+
+
+    public function ___getConfigInputfields() {
+
+        $inputfields = parent::___getConfigInputfields();
+
+        $field = $this->modules->get("InputfieldTextarea");
+        $field->attr('name', 'cropSetting');
+        $field->attr('value', (string) $this->cropSetting );
+        $field->label = $this->_("Crop Settings");
+        $field->description = $this->_('Enter all crop dimensions, one on each line in this format: name,width,height. Few examples: "landscape,900,600" or "portrait,200,600". Optionally, you can bind a cropsetting to only explicitly named templates by giving the templatename(s) as last parameter(s). Examples: "panorama,1200,600,home" or "square,300,300,basic-page,home"');
+
+        $inputfields->add($field);
+
+        return $inputfields;
+    }
+
+
+
+    public function install() {
+        parent::___install();
+    }
+
+
+
+    public function ___uninstall() {
+        if (!isset($GLOBALS['UNINSTALLROUTINE_RUNNING_CROPPABLEIMAGE']) || !in_array(__CLASS__, $GLOBALS['UNINSTALLROUTINE_RUNNING_CROPPABLEIMAGE'])) {
+            throw new WireException("Please only use FieldtypeCroppableImage to uninstall CroppableImage modules!");
+        }
+        parent::___uninstall();
+    }
+
+}
+
