@@ -3,7 +3,7 @@
 class ProcessCroppableImage extends Process implements Module {
 
 
-    const ciVersion = 82;
+    const ciVersion = 83;
 
     /**
      * Name used for the page created in the admin
@@ -103,7 +103,8 @@ class ProcessCroppableImage extends Process implements Module {
         $page = wire('pages')->get($pages_id);
         if (0==$page->id) throw new WireException(__('Invalid Page-ID'));
 
-        if (!$page->editable()) throw new WirePermissionException('Not Editable');
+        $editable = $page instanceof RepeaterPage ? $page->getForPage()->editable() : $page->editable();
+        if (!$editable) throw new WirePermissionException('Not Editable');
 
         $fieldValue = $page->get($field);
         if (!$fieldValue || !$fieldValue instanceof Pageimages) throw new WireException("Invalid field");
@@ -244,21 +245,8 @@ class ProcessCroppableImage extends Process implements Module {
             if ($crop['w'] < $cropSetting->width || $crop['h'] < $cropSetting->height) {
                 throw new WireException("To small settings for width and/or height!");
             }
-# Maybe we need this again when deciding to support for PW 2.5.0+,
-# but actually during testing we require 2.5.7+ with the modules *.info.json files
-//            // one dimension is equal to the minimum, check if they have a PW version that does
-//            // not have the needed Fix: https://github.com/ryancramerdesign/ProcessWire/pull/727
-//            if (version_compare(wire('config')->version, '2.5.7', '<')) {
-//                if ($crop['x1'] > 0) {
-//                    $crop['x1'] -= 1;
-//                } elseif ($crop['y1'] > 0) {
-//                    $crop['y1'] -= 1;
-//                } else {
-//                    $crop['w'] += 1;
-//                }
-//            }
         }
-        // ... ToDo: validate AspectRatio of $crop ??
+        // TODO: validate AspectRatio of $crop ??
 
         // we use the core ImageSizer (or any hooked-in ImageEngine) for the complete image manipulation ('cropExtra' is available since PW 2.5.0)
         $imOptions = array_merge($options,

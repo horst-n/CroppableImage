@@ -1,4 +1,4 @@
-# CroppableImage - Readme
+# CroppableImage
 
 ## Module for ProcessWire 2.5.11+
 
@@ -76,7 +76,7 @@ If you haven't cropped that image yet (via the cropping tool), a default croppin
 * Martijn Geerts (@Da-Fecto)
 
 #### Original Version
-* Developed by Antti Peisa (twitter.com/apeisa)
+* Developed by Antti Peisa (https://twitter.com/apeisa)
 * Sponsored by http://stillmovingdesign.com.au/ (thanks Marty!)
 * Original GitHub repository https://github.com/apeisa/Thumbnails
 

@@ -1,9 +1,9 @@
 {
-	"title": "InputfieldCroppableImage",
+    "title": "InputfieldCroppableImage",
     "summary": "only use FieldtypeCroppableImage to install / uninstall or configure Croppable Image Functionality!",
-	"version": 82,
-	"author": "",
-	"icon": "crop",
-	"requires": "ProcessWire>=2.5.11, PHP>=5.4.0, FieldtypeCroppableImage>=82",
+    "version": 82,
+    "author": "Horst Nogajski, Christian Raunitschka, Martijn Geerts",
+    "icon": "crop",
+    "requires": "ProcessWire>=2.5.11, PHP>=5.4.0, FieldtypeCroppableImage>=82",
     "singular": false
 }
