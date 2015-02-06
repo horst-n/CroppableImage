@@ -25,6 +25,25 @@ class CroppableImageHelpers {
 
 
     /**
+    * with a version near 2.5.16, PW logs / can log modules API actions,
+    * this can lead very quick to thousands of logentries with Croppableimages or Pia
+    * so we suppress logs for our config data merging
+    */
+    public static function writeModuleConfigData($classname, &$data) {
+        $logs = wire('config')->logs;                              // get current log status
+        if (!is_array($logs) && !isset($logs['modules'])) {
+            wire('modules')->saveModuleConfigData($classname, $data);
+            return;
+        }
+        wire('config')->logs = array();                            // switch off logging for modules
+        wire('modules')->saveModuleConfigData($classname, $data);  // save config data
+        wire('config')->logs = $logs;                              // toggle on logging for modules
+    }
+
+
+
+
+    /**
     * do the resizes like Pageimage does it
     *
     * @param object $caller

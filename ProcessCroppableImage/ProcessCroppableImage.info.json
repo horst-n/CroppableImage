@@ -4,7 +4,7 @@
     "version": 84,
     "author": "Horst Nogajski, Christian Raunitschka",
     "icon": "crop",
-    "requires": "ProcessWire>=2.5.11, PHP>=5.4.0, FieldtypeCroppableImage>=82",
+    "requires": "ProcessWire>=2.5.11, PHP>=5.3.8, FieldtypeCroppableImage>=83",
     "singular": true,
     "permission": "page-edit"
 }

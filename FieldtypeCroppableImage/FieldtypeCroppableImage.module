@@ -4,7 +4,7 @@
 class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModule {
 
 
-    const ciVersion = 82;
+    const ciVersion = 83;
 
 
 
@@ -45,7 +45,7 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
             } else {
                 $data['optionQualitySlider']['min'] = $data['optionQuality'];
             }
-            wire('modules')->saveModuleConfigData(__CLASS__, $data);
+            CroppableImageHelpers::writeModuleConfigData(__CLASS__, $data);
             unset($data);
         }
 
@@ -308,7 +308,7 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
 
             // good to get unformatted in case it's a single image field,
             // because it'll still be an array rather than 1 image
-            $pagefiles = $page->getUnformatted($imageField->name);
+            $pagefiles = $page->getUnformatted($imageField->name);          // TODO: name to lowercase ???
 
             // if the image's pagefiles property matches the one with the
             // field we're looking at, we have a match. save in $field
@@ -336,7 +336,7 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
         $cikc = new CroppableImageKeepCoords();
         $cics = new CroppableImageCropSettings($old);
 
-        $TABLE = 'field_' . $field->name;
+        $TABLE = 'field_' . $field->name;  // TODO: name to lowercase ???
         $r = wire('db')->query("SELECT pages_id,count(pages_id) FROM $TABLE GROUP BY pages_id ORDER BY pages_id");
         // TODO: use database (pdo) instead of db (mysqli)
 
@@ -349,7 +349,7 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
                 foreach($removed as $suffix => $v) {                                        // check a removed one
                     $cropsetting = $cics->getCropSetting($suffix);                          // get a removed cropsetting
                     if (!$cropsetting->isTemplateAllowed($page->template->name)) continue;  // continue if the page template does not match
-                    foreach($page->get($field->name) as $image) {                           // get a pageimage
+                    foreach($page->get($field->name) as $image) {    // TODO: name to lowercase ???                         // get a pageimage
                         $cikc->dropSuffix($image, $suffix);                                 // remove these settings from permanent storage
                         foreach($image->getVariations() as $i) {                            // get variations of that pageimage
                             if (null==$i->suffix($suffix)) continue;                        // check if a variationname has the current suffix
@@ -365,7 +365,7 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
                           !$csn->isTemplateAllowed($page->template->name)) ||               // continue if the actually page-template isn't allowed anymore
                          ($cso->width != $csn->width) ||                                    // or continue if the new width doesn't match the old width
                          ($cso->height != $csn->height) ) {                                 // or continue if the new height doesn't match the old height
-                        foreach($page->get($field->name) as $image) {                       // get a pageimage
+                        foreach($page->get($field->name) as $image) {   // TODO: name to lowercase ???                      // get a pageimage
                             $cikc->dropSuffix($image, $suffix);                             // remove these settings from permanent storage
                             foreach($image->getVariations() as $i) {                        // get variations of the pageimage
                                 if (null==$i->suffix($suffix)) continue;                    // check if a variationname has the current suffix

@@ -3,7 +3,7 @@
 class ProcessCroppableImage extends Process implements Module {
 
 
-    const ciVersion = 83;
+    const ciVersion = 84;
 
     /**
      * Name used for the page created in the admin

@@ -3,7 +3,7 @@
 class InputfieldCroppableImage extends InputfieldImage {
 
 
-    const ciVersion = 82;
+    const ciVersion = 83;
 
 
     public function __construct() {
@@ -198,7 +198,7 @@ class InputfieldCroppableImage extends InputfieldImage {
                 'width' => $cropSetting->width,
                 'height' => $cropSetting->height,
                 'pages_id' => (int) $this->input->get->id,
-                'field' => $this->name,
+                'field' => $this->name,  // TODO: name to lowercase ???
                 'modal' => 1
                 ));
 
