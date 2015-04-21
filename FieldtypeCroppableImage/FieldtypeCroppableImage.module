@@ -4,7 +4,7 @@
 class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModule {
 
 
-    const ciVersion = 83;
+    const ciVersion = 84;
 
 
 
@@ -336,7 +336,7 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
         $cikc = new CroppableImageKeepCoords();
         $cics = new CroppableImageCropSettings($old);
 
-        $TABLE = 'field_' . $field->name;  // TODO: name to lowercase ???
+        $TABLE = 'field_' . strtolower($field->name);  // TODO: name to lowercase ??? @noodles: Yes! ;-)  (https://processwire.com/talk/topic/8709-croppableimage/page-4#entry93416)
         $r = wire('db')->query("SELECT pages_id,count(pages_id) FROM $TABLE GROUP BY pages_id ORDER BY pages_id");
         // TODO: use database (pdo) instead of db (mysqli)
 
