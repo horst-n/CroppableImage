@@ -2,7 +2,7 @@
 
 ## Module for ProcessWire 2.5.11+
 
-## Version 0.8.3 Alpha
+## Version 0.8.4 Alpha
 
 
 ### How to install
