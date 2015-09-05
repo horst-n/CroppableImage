@@ -21,6 +21,9 @@ class CroppableImageKeepCoords {
     private $validIptcTags = array('005','007','010','012','015','020','022','025','030','035','037','038','040','045','047','050','055','060','062','063','065','070','075','080','085','090','092','095','100','101','103','105','110','115','116','118','120','121','122','130','131','135','150','199','209','210','211','212','213','214','215','216','217');
     private $iptcCustomfield = '2#216';  // use another field than CropImage with PiM
 
+     //initial values for cropW&cropH
+    private $cropH = 0;
+    private $cropW = 0;
 
     // !! $pageimage needs to be ALWAYS the original image, not a variation !!
     public function __construct($pageimage = null, $suffix = null, $cropW = null, $cropH = null, $permanentStorage=true) {
