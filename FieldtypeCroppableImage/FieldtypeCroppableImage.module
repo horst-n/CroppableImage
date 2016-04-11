@@ -51,6 +51,7 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
 
         // add a new method to pageimages to retrieve a cropped variation as pageimage object
         $this->addHook('Pageimage::getCrop', $this, 'getCrop');
+        $this->addHook('Pageimage::getCropSettings', $this, 'getCropSettings');
 
         // validates CropSettings
         // and tracks if previously used settings are removed, and if so, raises cleaning routines
@@ -139,6 +140,37 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
         return;
     }
 
+    /**
+     * getCropSettings
+     *
+     * CroppableImage Needs a way to get crop images sizes from the
+     * ProcessWire API. The largest usecase for this is when
+     * JSON encoding $page data, along with CroppableImage images variations.
+     *
+     * Example of how to use in JSON pages Module:
+     *
+     * ...
+     *  if ($field->type instanceOf FieldtypeCroppableImage ){
+     *       $cropSettings = $image->getCropSettings();
+     *       foreach($cropSettings as $setting){
+     *           $cropImage = $image->getCrop($setting->name);
+     *           $ret[$field->name][$i]['crops'][$setting->name]['width'] = $setting->width;
+     *           $ret[$field->name][$i]['crops'][$setting->name]['height'] = $setting->height;
+     *           $ret[$field->name][$i]['crops'][$setting->name]['url'] = $cropImage->url;
+     *       }
+     *  }
+     *  ...
+     *
+     * @param HookEvent $event
+     * @return bool
+     */
+    public function getCropSettings(HookEvent $event) {
+        $inputFieldInstance = $this->_getInputFieldInstance($event);
+        $cropSettings = new CroppableImageCropSettings($inputFieldInstance->cropSetting);
+        $sets =  $cropSettings->getCropSettingsForTemplate($event->object->page->template);
+        $event->return = $sets;
+        return true;
+    }
 
 
     // until now, (02.11.2014), getCrop() isn't affected by option "forceNew" in regard of the suffix-crop
@@ -375,7 +407,6 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
                         }
                     }
                 }
-
             #$this->pages->uncacheAll();
             $this->pages->uncache($page);                                                   // uncache used page
         }
