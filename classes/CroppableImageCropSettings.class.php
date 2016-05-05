@@ -1,9 +1,9 @@
-<?php
+<?php namespace ProcessWire;
 
 class CroppableImageCropSetting {
 
 
-    const ciVersion = 82;
+    const ciVersion = 90;
 
 
     public $name = null;

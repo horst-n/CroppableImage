@@ -1,10 +1,10 @@
 {
     "title": "FieldtypeCroppableImage",
     "summary": "ParentModule of CroppableImage, only use this to install / uninstall Croppable Image Functionality!",
-    "version": 84,
-    "author": "Horst Nogajski, Christian Raunitschka",
+    "version": 90,
+    "author": "Horst Nogajski",
     "icon": "crop",
-    "requires": "ProcessWire>=2.5.11, PHP>=5.3.8",
+    "requires": "ProcessWire>=3.0.14, PHP>=5.3.8, FieldtypeRangeSlider",
     "installs": "InputfieldCroppableImage, ProcessCroppableImage",
     "singular": false
 }

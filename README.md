@@ -1,8 +1,8 @@
-# CroppableImage
+# Croppable Image 3
 
-## Module for ProcessWire 2.5.11+
+## Module for ProcessWire 3.0.??+
 
-## Version 0.8.4 Alpha
+## Version 0.9.0 Beta
 
 
 ### How to install
@@ -15,7 +15,7 @@ Just add the folder __CroppableImage__ including all of its subfolders and files
 
 Use __*Fieldtype*CroppableImage__ to install all at once.
 
-After that create a new field and make it use the fieldtype ``CroppableImage``.
+After that create a new field and select it to use the fieldtype ``CroppableImage``.
 
 With this field you are able to define Cropsettings, but you don't have to. You also can use it like the core Imagefield and just benefit from some enhancements other than the crop-functionality.
 

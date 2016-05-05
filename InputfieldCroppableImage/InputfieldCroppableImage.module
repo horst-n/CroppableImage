@@ -1,9 +1,14 @@
-<?php
+<?php namespace ProcessWire;
 
 class InputfieldCroppableImage extends InputfieldImage {
 
 
-    const ciVersion = 83;
+    const ciVersion = 90;
+
+    protected $imagefieldCroptoolDisabled;
+    protected $thumbnailContain;
+    protected $thumbnailShowBasename;
+    protected $thumbnailShowBasenameCharlength = 20;
 
 
     public function __construct() {
@@ -13,41 +18,74 @@ class InputfieldCroppableImage extends InputfieldImage {
     }
 
 
-
     public function init() {
         parent::init();
         // default settings
         $this->set('cropSetting', '');
-    }
+        // we definetly need this to be displayed, as it contains the cropLinks !!
+        $this->set('useImageEditor', 1);
 
+        $this->globalOptions = $globalOptions = CroppableImageHelpers::arrayToObject(array_merge(FieldtypeCroppableImage::getDefaultData(), CroppableImageHelpers::getGlobalConfigSettings(true)));
+        // disable or enable the individual CropTool of the core imagefield in the image editor
+        $this->imagefieldCroptoolDisabled = (bool) $globalOptions->imagefieldCroptoolDisabled;
+        // initial settings for Thumbs and basename
+        $this->thumbnailContain = ($globalOptions->thumbnailContain == '1' ? true : false);
+        $this->thumbnailShowBasename = (bool) $globalOptions->thumbnailShowBasename;
+        $this->thumbnailShowBasenameCharlength = is_array($globalOptions->thumbnailShowBasenameCharlength) && isset($globalOptions->thumbnailShowBasenameCharlength['min']) ? $globalOptions->thumbnailShowBasenameCharlength : array('min' => 15);
+    }
 
 
     public function ___render() {
-        $this->config->scripts->add($this->config->urls->InputfieldImage . "InputfieldImage.js");
-        $this->config->styles->add($this->config->urls->InputfieldImage . "InputfieldImage.css");
+        $this->config->styles->append($this->config->urls->InputfieldImage . "InputfieldImage.css");
+        $this->config->styles->append($this->config->urls->InputfieldCroppableImage . "InputfieldCroppableImageMan.css");
+        $this->config->scripts->append($this->config->urls->InputfieldImage . "InputfieldImage.js");
+        $this->config->scripts->append($this->config->urls->InputfieldCroppableImage . "InputfieldCroppableImageMan.js");
 
-        $cropSettings = new CroppableImageCropSettings($this->cropSetting);
+        $page = $this->pages->get('id=' . (int) $this->input->get->id);
+        if(!$page->id || !$page->editable()) throw new WirePermissionException();
 
-        $page = $this->pages->get((int) $this->input->get->id);
-        if (!$page->id || !$page->editable()) throw new WirePermissionException();
+        $headerElements = array();
+        $headerElements[] = "<input type='text' name='croppablefilter' id='croppablefilter' minlength='0' maxlength='20' placeholder='" . $this->_("filter by name") . "' autocomplete='off' />";
+        $headerElements[] = "<a href='javascript:croppableToggleBasename(\"{$this->id}\")'>" . $this->_('imagenames') . "</a>";
+        $headerElements[] = "<a href='javascript:croppableToggleThumbs(\"{$this->id}\")'><i class='fa fa-compress'></i> " . $this->_('thumbnails') . " <i class='fa fa-expand'></i></a>";
+        $out = '<p> ' . implode(' | ', $headerElements) . ' </p>';
+        $out .= $this->renderInputFilterJS($this->id);
 
-        $out = '';
-        if ($this->user->isSuperuser()) {
+
+        #if($this->user->isSuperuser()) {}
+
+        $globalOptions = $this->globalOptions;
+        $colors = array(
+            'basename_color_bg' => $globalOptions->basename_color_bg,
+            'basename_color_fg' => $globalOptions->basename_color_fg,
+            'basename_color_fg_shadow' => $globalOptions->basename_color_fg_shadow
+        );
+        $alphas = array(
+            'basename_color_bg_alpha' => $globalOptions->basename_color_bg_alpha,
+            'basename_color_fg_alpha' => $globalOptions->basename_color_fg_alpha,
+            'basename_color_fg_shadow_alpha' => $globalOptions->basename_color_fg_shadow_alpha
+        );
+        $rgbas = array();
+        foreach($colors as $k => $v) {
+            $s = 'rgba(';
+            $a = CroppableImageHelpers::sanitizeColor($v);
+            $a[3] = floatval($alphas[$k . '_alpha']['min'] / 10);
+            $s .= implode(', ', $a) . ')';
+            $rgbas[$k] = $s;
         }
-        return $out . parent::___render() . "";
+        $styles = "\n<style type='text/css'>\n\tdiv.croppableImageBasename { ";
+        $styles .= "background:{$rgbas['basename_color_bg']}; ";
+        $styles .= "color:{$rgbas['basename_color_fg']}; ";
+        $styles .= "text-shadow: 0 0 2px {$rgbas['basename_color_fg_shadow']} }";
+        $styles .= "\n\t.InputfieldCroppableImage .gridImage, .InputfieldCroppableImage .gridImage__trash, .InputfieldCroppableImage .gridImage__overflow { background-color: rgb(" . implode(',', CroppableImageHelpers::sanitizeColor($globalOptions->griditem_color_bg)) . ") }";
+        $styles .= "\n\t.gridImage__tooltip { background-color: rgb(" . implode(',', CroppableImageHelpers::sanitizeColor($globalOptions->tooltip_color_bg)) . ") }";
+        if($this->thumbnailShowBasename) $styles .= "\n\tdiv.croppableImageBasename { display:block }";
+        $styles .= "\n</style>\n";
+
+        #$out .= my_var_dump($rgbas, 3);
+
+        return $out . parent::___render() . $styles;
     }
-
-
-
-    /**
-     * Add adminThumbs class to InputfieldFileItem
-     *
-     */
-    protected function renderItemWrap($out) {
-        $adminThumb = $this->adminThumbs ? ' adminThumb' : ' fullImage';
-        return     "<li class='{$this->itemClass}{$adminThumb}'>$out</li>";
-    }
-
 
 
     /**
@@ -57,13 +95,15 @@ class InputfieldCroppableImage extends InputfieldImage {
      * @return array
      *
      */
-    public function getAdminThumbCroppable(PageImage $img) {
+    public function getAdminThumb(PageImage $img) {
 
         // get thumbnail information
         $x = 4;
         $y = 3;
 
-        $info = $this->getAdminThumb($img);
+        $info = parent::getAdminThumb($img);
+        // show thumbnail contained?
+        if($this->thumbnailContain) $info['markup'] = str_replace('<img ', '<img class="ciThumbnailContain" ', $info['markup']);
         $thumb = $info['thumb'];
         $attr = $info['attr'];
         $orientation = $thumb->height() > $thumb->width() ? 'portrait' : 'landscape';
@@ -104,54 +144,95 @@ class InputfieldCroppableImage extends InputfieldImage {
     }
 
 
+    protected function ___renderButtons($pagefile, $id, $n) {
+        $pageID = $pagefile->pagefiles->page->id;
+        $variations = $this->getPagefileVariations($pagefile);
+        $variationCount = count($variations);
 
-    /**
-     * Render individual Pageimage (main markup)
-     *
-     * @var $thumb (Pagefile)
-     * @var $id (string) indentifier of the Pagefile
-     * @var $n (integer) order of the file stored in the field
-     *
-     */
-    protected function ___renderItem($pagefile, $id, $n) {
+        $crop = '';
+        if(!$this->imagefieldCroptoolDisabled) {
+            $crop = "<button data-href='" . $this->getEditUrl($pagefile, $pageID) . "' ";
+            $crop .= "class='ui-button ui-corner-all ui-state-default $this->modalClass pw-modal' ";
+            $crop .= "data-buttons='#non_rte_dialog_buttons button' ";
+            $crop .= "data-autoclose='1' ";
+            $crop .= "data-close='#non_rte_cancel' ";
+            $crop .= "><span class='ui-button-text'><span class='fa fa-crop'></span> " . $this->_('Crop') . "</span></button>";
+        }
+        $variations = "<button data-href='" . $this->getVariationUrl($pagefile, $id) . "' ";
+        $variations .= "class='ui-button ui-corner-all ui-state-default {$this->modalClass} pw-modal' ";
+        $variations .= "data-buttons='button' ";
+        $variations .= "><span class='ui-button-text'>";
+        $variations .= "<span class='fa fa-files-o'></span> " . $this->_('Variations') . " ($variationCount)</span></button>";
 
-        // Get Admin Thumbnail
-        $AdminThumb = $this->getAdminThumbCroppable($pagefile);
+        $out = $crop . $variations;
 
-        return "<p class='InputfieldFileInfo InputfieldItemHeader ui-widget ui-widget-header'>" .
-            "<span data-id='$id' class='editCropItem'><i class='fa fa-pencil'></i> " . $this->_('Edit') . "</span>" .
-            "<span class='InputfieldFileName'>{$pagefile->basename}</span>" .
-            "<span class='InputfieldFileStats stats-seperator'> &bull; </span>" .
-            "<span class='InputfieldFileStats stats-filesize'>{$pagefile->filesizeStr}</span>" .
-            "<span class='InputfieldFileStats stats-seperator'> &bull; </span>" .
-            "<span class='InputfieldFileStats stats-dimensions'>{$pagefile->width}×{$pagefile->height}</span>" .
-            "<label class='InputfieldFileDelete'>" .
-                "<input type='checkbox' name='delete_{$id}' value='1' />" .
-                "<i class='fa fa-trash'></i>" .
-            "</label>" .
-            "<a class='InputfieldFileMove InputfieldFileMoveBottom' href='#' title='" . $this->_('Move to bottom') . "'>" .
-                "<i class='fa fa-chevron-down'></i>" .
-            "</a>" .
-            "<a class='InputfieldFileMove InputfieldFileMoveTop' href='#' title='" . $this->_('Move to top') . "'>" .
-                "<i class='fa fa-chevron-up'></i>" .
-            "</a> " .
-        "</p>" .
-        // ugly hack to make left aligned thumbs & delete collapse possible
-        ($this->adminThumbs ? "<div class='CroppableImageContainer InputfieldFileData' >" : '') .
-            "<a class='InputfieldFileLink InputfieldFileData' target='_blank' href='{$pagefile->url}'" . $AdminThumb['linkCSS'] . ">" .
-                "<img " . $this->arrayToAttr($AdminThumb['attr']) . " alt='$pagefile->description' />" .
-            "</a>" .
-            "<div class='InputfieldFileData ui-widget ui-widget-content'" . $AdminThumb['dataCSS'] . ">" .
-                ($AdminThumb['error'] ? "<span class='ui-state-error-text'>" . $this->wire('sanitizer')->entities($thumb['error']) . "</span>" : "") .
-                $this->renderItemDescriptionField($pagefile, $id, $n) .
-                $this->getCropLinks($pagefile) .
-                "<input class='InputfieldFileSort' type='text' name='sort_{$id}' value='{$n}' />" .
-            "</div>" .
-        ($this->adminThumbs ? "</div>" : '');
+        $out = "<p class='croppableImageButtons'>" . $this->_("predefined Crops") . "</p>" .
+                $this->getCropLinks($pagefile) . "<br /><hr />" . $out;
+        return $out;
     }
 
 
+    protected function ___renderItem($pagefile, $id, $n) {
+        $out = parent::___renderItem($pagefile, $id, $n);
+        #$editable = $this->isEditableInRendering($pagefile);
+        #$injection = "<div class='croppableImageBasename' data-basename='{$pagefile->basename}'>" . $this->getDisplayBasename($pagefile, $this->thumbnailShowBasenameCharlength['min']) . "</div>";
+        $injection = "<div class='croppableImageBasename' data-basename='{$pagefile->basename}'>" . $this->displayShortBasename($pagefile->name, $this->thumbnailShowBasenameCharlength['min']) . "</div>";
+        $search = "<div class='ImageData'>";
+        $replace = "{$injection}<div class='ImageData'>";
+        return str_replace($search, $replace, $out);
+    }
 
+
+    protected function ___buildTooltipData($pagefile) {
+        $data = array();
+        $data[] = array($this->_("Dimensions"), "{$pagefile->width}&nbsp;x&nbsp;{$pagefile->height}");
+        $data[] = array($this->_("Filesize"), str_replace(' ', '&nbsp;', $pagefile->filesizeStr));
+        $data[] = array($this->_("Variations"), count($this->getPagefileVariations($pagefile)));
+        if(strlen($pagefile->description))
+            $data[] = array($this->_("Description"), "<span class='fa fa-check'></span>");
+        if($this->useTags && strlen($pagefile->tags))
+            $data[] = array($this->_("Tags"), "<span class='fa fa-check'></span>");
+
+        return $data;
+    }
+
+
+    protected function ___renderAdditionalFields($pagefile, $id, $n) {
+        if($this->config->debug) {
+            $ImageSizer = new ImageSizer($pagefile->filename);
+            $infos = $ImageSizer->getImageInfo(true);
+            unset($ImageSizer);
+            $value = "<hr class='spacer'/><table class='croppableInspect'>";
+            $value .= "<tr><td class='croppableInspectName'>filename</td><td>" . str_replace($this->config->paths->root, '', $infos['filename']) . "</td></tr>";
+            foreach($infos['info'] as $key => $info) {
+                if($key == 'palette') continue;
+                if($key == 'appmarker' && is_array($info)) $info = implode(' | ', $info);
+                if(is_array($info)) $info = implode(' | ', $info);
+                $value .= "<tr><td class='croppableInspectName'>{$key}</td><td>" . htmlentities($info) . "</td></tr>";
+            }
+            $value .= "</table>";
+            $markup = $this->modules->get("InputfieldMarkup");
+            $markup->set('value', $value);
+            return $markup->render();
+        }
+    }
+
+
+    protected function renderInputFilterJS($parentID) {
+        $parentID = 'wrap_' . $parentID;
+        return "\n<script type='text/javascript'>$(document).ready(function(){croppableRegisterFilterBasename('$parentID');});</script>\n";
+    }
+
+    
+    private function displayShortBasename($str, $max) {
+        $cur = strlen($str);
+        $max = !is_numeric($max) || 10 > $max ? 10 : $max;
+        if($cur <= $max) return $str;
+        $part = intval(($max - 6) / 3 * 2);
+        return substr($str, 0, (2 * $part)) . '...' . substr($str, ($cur - $part));
+    }
+
+    
     /**
      * Returns the croplinks HTML string or boolean false. Depending on field
      * configuration.
@@ -160,32 +241,32 @@ class InputfieldCroppableImage extends InputfieldImage {
      * @return mixed (string|bool false)
      *
      */
-    private function getCropLinks($pagefile){
+    private function getCropLinks($pagefile) {
 
         $cropSettings = new CroppableImageCropSettings($this->cropSetting);
 
         // no crops, no glory
-        if (!count($cropSettings->items)) return false;
+        if(!count($cropSettings->items)) return false;
 
-        $baseCropUrl    = $this->config->urls->admin . "page/" . ProcessCroppableImage::adminPageName . "/";
-        $upscaling      = CroppableImageHelpers::getGlobalImageSetting('upscaling');  // setting 1x holen reicht :)
+        $baseCropUrl = $this->config->urls->admin . "page/" . ProcessCroppableImage::adminPageName . "/";
+        $upscaling = CroppableImageHelpers::getGlobalImageSetting('upscaling');  // setting 1x holen reicht :)
         $templateName = $pagefile->page->template->name;
         $imageWidth = $pagefile->width;
         $imageHeight = $pagefile->height;
-        $adminThumb = $this->getAdminThumbCroppable($pagefile);
+        $adminThumb = $this->getAdminThumb($pagefile);
         $jsCropInfo = array();
         $out = '';
 
         foreach($cropSettings->items as $cropSetting) {
 
-            if (!$cropSetting->isTemplateAllowed($templateName)) continue;
+            if(!$cropSetting->isTemplateAllowed($templateName)) continue;
 
             $warning = false;
             $suffix = $this->sanitizer->name($cropSetting->name);
             $imageTooSmall = $cropSetting->width > $imageWidth || $cropSetting->height > $imageHeight;
 
             // Upscaling not allowed ($config setting)
-            if ($imageTooSmall && $upscaling === false) {
+            if($imageTooSmall && $upscaling === false) {
                 $warning = sprintf($this->_('This crop setting (%s) is larger than the source image (%s) and upscaling is not allowed.'),
                     "{$cropSetting->width}x{$cropSetting->height}",
                     "{$imageWidth}x{$imageHeight}");
@@ -198,7 +279,7 @@ class InputfieldCroppableImage extends InputfieldImage {
                 'width' => $cropSetting->width,
                 'height' => $cropSetting->height,
                 'pages_id' => (int) $this->input->get->id,
-                'field' => $this->name,  // TODO: name to lowercase ???
+                'field' => mb_strtolower($this->name),  // TODO: name to lowercase ??? N: Yes! ;-)  ()
                 'modal' => 1
                 ));
 
@@ -206,7 +287,7 @@ class InputfieldCroppableImage extends InputfieldImage {
             $attr = array('data-suffix' => $suffix);
 
             // Upscaling not allowed ($config setting)
-            if ($warning) {
+            if($warning) {
                 $attr['data-croppable'] = 0;
                 $attr['class'] = 'crop-button ui-state-error';
                 $attr['data-warning'] = $warning;
@@ -225,11 +306,8 @@ class InputfieldCroppableImage extends InputfieldImage {
                 'height' => $cropSetting->height,
                 );
 
-            $out .= "<a " . $this->arrayToAttr($attr) . ">";
+            $out .= "<a " . CroppableImageHelpers::arrayToHtmlAttr($attr) . ">";
             $out .= "<i class='fa "  . ($warning ? 'fa-exclamation-circle' : 'fa-crop') . "'></i> ";
-
-
-
             $out .= "<span>";
             $out .= $cropSetting->name;
             $out .= "</span> ";
@@ -255,49 +333,24 @@ class InputfieldCroppableImage extends InputfieldImage {
 
 
 
-    /**
-     * Helper method: Array to HTML attributes string
-     *
-     * @param (array) $array, key value pair array
-     * @return (string)
-     *
-     */
-    public function arrayToAttr($array) {
-        if (!count($array)) return '';
-        $out = '';
-        foreach ($array as $key => $value) $out .= $key . "='{$value}' ";
-        return trim($out);
-    }
-
-
+ // ----------------------------------------
 
     public function ___getConfigInputfields() {
-
         $inputfields = parent::___getConfigInputfields();
-
         $field = $this->modules->get("InputfieldTextarea");
         $field->attr('name', 'cropSetting');
         $field->attr('value', (string) $this->cropSetting );
         $field->label = $this->_("Crop Settings");
         $field->description = $this->_('Enter all crop dimensions, one on each line in this format: name,width,height. Few examples: "landscape,900,600" or "portrait,200,600". Optionally, you can bind a cropsetting to only explicitly named templates by giving the templatename(s) as last parameter(s). Examples: "panorama,1200,600,home" or "square,300,300,basic-page,home"');
-
         $inputfields->add($field);
-
         return $inputfields;
     }
-
-
 
     public function install() {
         parent::___install();
     }
 
-
-
     public function ___uninstall() {
-        if (!isset($GLOBALS['UNINSTALLROUTINE_RUNNING_CROPPABLEIMAGE']) || !in_array(__CLASS__, $GLOBALS['UNINSTALLROUTINE_RUNNING_CROPPABLEIMAGE'])) {
-            throw new WireException("Please only use FieldtypeCroppableImage to uninstall CroppableImage modules!");
-        }
         parent::___uninstall();
     }
 

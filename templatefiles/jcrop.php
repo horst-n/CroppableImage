@@ -1,3 +1,4 @@
+<?php namespace ProcessWire; ?>
 <?php if (isset($invalidFieldText) && $invalidFieldText): ?>
     <p class='description'><?php echo $invalidFieldText; ?></p>
 <?php else: ?>

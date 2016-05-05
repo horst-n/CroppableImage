@@ -1,10 +1,10 @@
-<?php
+<?php namespace ProcessWire;
 
 
 class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModule {
 
 
-    const ciVersion = 84;
+    const ciVersion = 90;
 
 
 
@@ -15,9 +15,23 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
      */
     static public function getDefaultData() {
         return array(
-            'manualSelectionDisabled' => '0',
+            'imagefieldCroptoolDisabled' => 1,
+            'thumbnailContain' => 0,
+            'thumbnailShowBasename' => 0,
+            'thumbnailShowBasenameCharlength' => array('min' => 15),
+            'manualSelectionDisabled' => 0,
+            'useImageEngineDefaults' => 0,
             'optionQuality' => 90,
-            'optionSharpening' => 'soft'
+            'optionSharpening' => 'soft',
+            'tooltip_color_bg' => 'FAFAFA',
+            'griditem_color_bg' => 'F2F6F6',
+            'basename_color_bg' => 'F2F6F6',
+            'basename_color_bg' => 'F2F6F6',
+            'basename_color_fg' => '000000',
+            'basename_color_fg_shadow' => 'FFFFFF',
+            'basename_color_bg_alpha' => array('min' => 6),
+            'basename_color_fg_alpha' => array('min' => 10),
+            'basename_color_fg_shadow_alpha' => array('min' => 10),
             );
     }
 
@@ -37,21 +51,20 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
         parent::init();
 
         // synchronize quality-Inputfields (integer vs slider)
-        if (isset($this->data['optionQuality']) || isset($this->data['optionQualitySlider']['min'])) {
-            $data = wire('modules')->getModuleConfigData(__CLASS__);
+        if(isset($this->data['optionQuality']) || isset($this->data['optionQualitySlider']['min'])) {
+            $data = wire('modules')->getModuleConfigData(str_replace(__NAMESPACE__ . '\\', '', __CLASS__));
             $hasSlider = wire('modules')->isInstalled('InputfieldRangeSlider');
             if ($hasSlider && isset($data['optionQualitySlider']['min']) && $data['optionQualitySlider']['min'] != $data['optionQuality']) {
                 $data['optionQuality'] = $data['optionQualitySlider']['min'];
             } else {
                 $data['optionQualitySlider']['min'] = $data['optionQuality'];
             }
-            CroppableImageHelpers::writeModuleConfigData(__CLASS__, $data);
+            CroppableImageHelpers::writeModuleConfigData(str_replace(__NAMESPACE__ . '\\', '', __CLASS__), $data);
             unset($data);
         }
 
         // add a new method to pageimages to retrieve a cropped variation as pageimage object
         $this->addHook('Pageimage::getCrop', $this, 'getCrop');
-        $this->addHook('Pageimage::getCropSettings', $this, 'getCropSettings');
 
         // validates CropSettings
         // and tracks if previously used settings are removed, and if so, raises cleaning routines
@@ -140,37 +153,6 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
         return;
     }
 
-    /**
-     * getCropSettings
-     *
-     * CroppableImage Needs a way to get crop images sizes from the
-     * ProcessWire API. The largest usecase for this is when
-     * JSON encoding $page data, along with CroppableImage images variations.
-     *
-     * Example of how to use in JSON pages Module:
-     *
-     * ...
-     *  if ($field->type instanceOf FieldtypeCroppableImage ){
-     *       $cropSettings = $image->getCropSettings();
-     *       foreach($cropSettings as $setting){
-     *           $cropImage = $image->getCrop($setting->name);
-     *           $ret[$field->name][$i]['crops'][$setting->name]['width'] = $setting->width;
-     *           $ret[$field->name][$i]['crops'][$setting->name]['height'] = $setting->height;
-     *           $ret[$field->name][$i]['crops'][$setting->name]['url'] = $cropImage->url;
-     *       }
-     *  }
-     *  ...
-     *
-     * @param HookEvent $event
-     * @return bool
-     */
-    public function getCropSettings(HookEvent $event) {
-        $inputFieldInstance = $this->_getInputFieldInstance($event);
-        $cropSettings = new CroppableImageCropSettings($inputFieldInstance->cropSetting);
-        $sets =  $cropSettings->getCropSettingsForTemplate($event->object->page->template);
-        $event->return = $sets;
-        return true;
-    }
 
 
     // until now, (02.11.2014), getCrop() isn't affected by option "forceNew" in regard of the suffix-crop
@@ -368,7 +350,7 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
         $cikc = new CroppableImageKeepCoords();
         $cics = new CroppableImageCropSettings($old);
 
-        $TABLE = 'field_' . strtolower($field->name);  // TODO: name to lowercase ??? @noodles: Yes! ;-)  (https://processwire.com/talk/topic/8709-croppableimage/page-4#entry93416)
+        $TABLE = 'field_' . $field->name;  // TODO: name to lowercase ???
         $r = wire('db')->query("SELECT pages_id,count(pages_id) FROM $TABLE GROUP BY pages_id ORDER BY pages_id");
         // TODO: use database (pdo) instead of db (mysqli)
 
@@ -407,6 +389,7 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
                         }
                     }
                 }
+
             #$this->pages->uncacheAll();
             $this->pages->uncache($page);                                                   // uncache used page
         }
@@ -434,14 +417,6 @@ class FieldtypeCroppableImage extends FieldtypeImage implements ConfigurableModu
 
 
     public function ___uninstall() {
-        $GLOBALS['UNINSTALLROUTINE_RUNNING_CROPPABLEIMAGE'] = array();
-        foreach(array('ProcessCroppableImage', 'InputfieldCroppableImage') as $mod) {
-            $this->modules->resetCache();
-            if (!$this->modules->isInstalled($mod)) continue;
-            $GLOBALS['UNINSTALLROUTINE_RUNNING_CROPPABLEIMAGE'][$mod] = $mod;
-            $m = $this->modules->get($mod);
-            $m->uninstall();
-        }
         parent::___uninstall();
     }
 
