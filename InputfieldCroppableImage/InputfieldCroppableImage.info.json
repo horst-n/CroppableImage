@@ -4,6 +4,6 @@
     "version": 90,
     "author": "Horst Nogajski, Christian Raunitschka, Martijn Geerts",
     "icon": "crop",
-    "requires": "ProcessWire>=3.0.14, PHP>=5.3.8, FieldtypeCroppableImage>=90",
+    "requires": "ProcessWire>=3.0.17, PHP>=5.3.8, FieldtypeCroppableImage>=90",
     "singular": false
 }
