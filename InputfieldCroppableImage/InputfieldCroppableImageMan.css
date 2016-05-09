@@ -4,50 +4,81 @@
  *
 **/
 
-/* overrides to the core imagefield */
+/* (configurable) overrides to the core imagefield */
 
-    /*div.InputfieldImageEdit__buttons input.InputfieldFileSort { display: none }*/
+    li.ImageOuter,
+    .gridImage,
+    .gridImage__trash,
+    .gridImage__overflow
+    { background-color: #f2f6f6 }
 
-    .InputfieldCroppableImage .gridImage,
-    .InputfieldCroppableImage .gridImage__trash,
-    .InputfieldCroppableImage .gridImage__overflow { background-color: #f2f6f6 }
-    .InputfieldCroppableImage .gridImage { border: 0 none }
-    .InputfieldCroppableImage .gridImage__overflow { background-image: none }
-    .InputfieldCroppableImage .gridImage__overflow > img.ciThumbnailContain {
+    .gridImage { border: 0 none }
+
+    .gridImage__overflow
+    { background-image: none }
+
+    .gridImage__overflow > img {
+        background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAIRJREFUeNqUUkEOwCAIE8OP9hGf6g/ZPDRplCH0okZboVTM7GkB5pzRdestARE59lh7hvxVeQgBehNYZBAhxPueLZ+FSh4sIn7zWimbuLeSEmDCPgnFnNltfjTGCMXVc9g7/waJTYr6vibRS1tJwEteWoBJCEzaAy/rpQr2rFf6X3gFGADTg01sfuB1kAAAAABJRU5ErkJggg==') repeat !important;
+    }
+
+    .gridImage__overflow > img.ciThumbnailContain {
         display: block;
         max-width:100%;
         max-height:100%;
         width:auto;
         height:auto;
     }
+
     .InputfieldCroppableImage .gridImage--active,
     .InputfieldCroppableImage .gridImage--active .gridImage__trash,
     .InputfieldCroppableImage .gridImage--active .gridImage__trash:hover,
-    .InputfieldCroppableImage .gridImage--active:hover .gridImage__trash:hover { background-color: #3eb998 }
-    .InputfieldCroppableImage .gridImage--active .gridImage__trash,
-    .InputfieldCroppableImage .gridImage--active .gridImage__trash:hover { color: white }
+    .InputfieldCroppableImage .gridImage--active:hover .gridImage__trash:hover,
+    .InputfieldCroppableImage .gridImage--active:hover .gridImage__trash:hover span,
+    .InputfieldCroppableImage .gridImage--active:hover .gridImage__trash:hover span:hover
+    { background-color: #3eb998; color: white }
 
     .InputfieldCroppableImage .gridImage--delete,
     .InputfieldCroppableImage .gridImage--delete .gridImage__trash:hover,
     .InputfieldCroppableImage .gridImage--delete:hover .gridImage__trash:hover,
-    .InputfieldCroppableImage .gridImage--delete .gridImage__trash { background-color: #e83561 }
-    .InputfieldCroppableImage .InputfieldImageEditSingle.gridImage--delete .InputfieldImageEdit__inner { outline: 3px solid #e83561 }
-    .InputfieldCroppableImage .gridImage--delete .gridImage__trash { color: white; display: block }
+    .InputfieldCroppableImage .gridImage--delete .gridImage__trash
+    { background-color: #e83561 }
 
-    .InputfieldCroppableImage .gridImage--active .gridImage__inner { background: rgba(62, 185, 152, .5) }
-    .InputfieldCroppableImage .gridImage--delete:hover .gridImage__inner { background: rgba(232, 53, 97, 0.3) }
-    .InputfieldCroppableImage span.InputfieldImageEdit__info { color: rgba(0, 0, 0, 0.45) }
+    .InputfieldCroppableImage .InputfieldImageEditSingle.gridImage--delete .InputfieldImageEdit__inner
+    { outline: 3px solid #e83561 }
 
-    .InputfieldCroppableImage .InputfieldImageEditSingle.gridImage--delete { background-color: transparent }
-    .InputfieldCroppableImage .gridImage--delete:hover .gridImage__edit { display: none }
+    .InputfieldCroppableImage .gridImage--delete .gridImage__trash
+    { color: white }
+
+    .InputfieldCroppableImage .gridImage--delete,
+    .InputfieldCroppableImage .gridImage--delete .gridImage__trash,
+    .InputfieldCroppableImage .gridImage--delete .gridImage__trash span,
+    .InputfieldCroppableImage .gridImage--delete:hover .gridImage__trash span,
+    .InputfieldCroppableImage .gridImage--delete:hover .gridImage__trash:hover span,
+    .InputfieldCroppableImage .gridImage--delete:hover .gridImage__trash:hover span:hover
+    { color: white }
+
+    .InputfieldCroppableImage .gridImage--active .gridImage__inner
+    { background: rgba(62, 185, 152, .5) }
+
+    .InputfieldCroppableImage .gridImage--delete:hover .gridImage__inner
+    { background: rgba(232, 53, 97, 0.3) }
+
+    .InputfieldCroppableImage span.InputfieldImageEdit__info
+    { color: rgba(0, 0, 0, 0.45) }
+
+    .InputfieldCroppableImage .InputfieldImageEditSingle.gridImage--delete
+    { background-color: transparent }
+
+    .InputfieldCroppableImage .gridImage--delete:hover .gridImage__edit
+    { display: none }
 
 
     .gridImage__tooltip {
+        /*transform: translate(-50%, 0);*/
+        /*transform: translate(-50%, 0) perspective(0) scale(1);*/
         background: #fafafa;
         opacity: 0;
         transition: opacity .2s 02;
-        font-size: 0.9em;
-        line-height: 1.5em;
     }
     .gridImage:hover .gridImage__tooltip {
         display: block;
@@ -63,14 +94,13 @@
         color: rgb(120,120,120);
         font-weight: normal;
         text-align: right;
-        font-size: 0.9em;
-        line-height: 1.3em;
     }
     .gridImage__tooltip table td {
         color: rgb(25,25,25);
-        font-weight: normal;
+        font-weight: bold;
         text-align: left;
     }
+
 
 
 /* additions of the croppable images field */
@@ -82,17 +112,18 @@
         padding: 0;
         border-spacing: 10px 0;
         border-collapse: separate;
-        line-height: 1.5em;
+        line-height: 1.8em;
+        font-size: 1em;
     }
     table.croppableInspect td.croppableInspectName {
-        color: rgb(160,160,160);
+        color: rgb(120,120,120);
         font-weight: normal;
         text-align: right;
         vertical-align: top;
     }
     table.croppableInspect td {
-        color: rgb(120,120,120);
-        font-weight: normal;
+        color: rgb(75,75,75);
+        font-weight: bold;
         text-align: left;
     }
 
@@ -222,26 +253,4 @@
         background: rgba(0,0,0,.3);
     }
 
-
-
-
-
-
-@media screen and (max-width:740px) {
-    .InputfieldCroppableImage .InputfieldImageEdit__imagewrapper {
-        max-width: 180px;
-        padding: 0;
-    }
-}
-
-@media screen and (max-width:580px) {
-    .InputfieldCroppableImage .InputfieldImageEdit__imagewrapper {
-        display: none;
-    }
-    .InputfieldCroppableImage .InputfieldImageEdit__edit {
-        display: block;
-        width: 100%;
-        flex-grow: unset;
-    }
-}
 

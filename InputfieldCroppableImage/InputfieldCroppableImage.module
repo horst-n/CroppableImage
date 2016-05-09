@@ -18,6 +18,7 @@ class InputfieldCroppableImage extends InputfieldImage {
     }
 
 
+
     public function init() {
         parent::init();
         // default settings
@@ -35,10 +36,13 @@ class InputfieldCroppableImage extends InputfieldImage {
     }
 
 
+
     public function ___render() {
-        $this->config->styles->append($this->config->urls->InputfieldImage . "InputfieldImage.css");
+$this->config->styles->remove($this->config->urls->InputfieldImage . "InputfieldImage.css");
+$this->config->styles->append($this->config->urls->InputfieldCroppableImage . "InputfieldImage.css");
         $this->config->styles->append($this->config->urls->InputfieldCroppableImage . "InputfieldCroppableImageMan.css");
-        $this->config->scripts->append($this->config->urls->InputfieldImage . "InputfieldImage.js");
+$this->config->scripts->remove($this->config->urls->InputfieldImage . "InputfieldImage.js");
+$this->config->scripts->append($this->config->urls->InputfieldCroppableImage . "InputfieldImage.js");
         $this->config->scripts->append($this->config->urls->InputfieldCroppableImage . "InputfieldCroppableImageMan.js");
 
         $page = $this->pages->get('id=' . (int) $this->input->get->id);
@@ -77,7 +81,7 @@ class InputfieldCroppableImage extends InputfieldImage {
         $styles .= "background:{$rgbas['basename_color_bg']}; ";
         $styles .= "color:{$rgbas['basename_color_fg']}; ";
         $styles .= "text-shadow: 0 0 2px {$rgbas['basename_color_fg_shadow']} }";
-        $styles .= "\n\t.InputfieldCroppableImage .gridImage, .InputfieldCroppableImage .gridImage__trash, .InputfieldCroppableImage .gridImage__overflow { background-color: rgb(" . implode(',', CroppableImageHelpers::sanitizeColor($globalOptions->griditem_color_bg)) . ") }";
+        $styles .= "\n\tli.ImageOuter, .gridImage, .gridImage__trash, .gridImage__overflow { background-color: rgb(" . implode(',', CroppableImageHelpers::sanitizeColor($globalOptions->griditem_color_bg)) . ") }";
         $styles .= "\n\t.gridImage__tooltip { background-color: rgb(" . implode(',', CroppableImageHelpers::sanitizeColor($globalOptions->tooltip_color_bg)) . ") }";
         if($this->thumbnailShowBasename) $styles .= "\n\tdiv.croppableImageBasename { display:block }";
         $styles .= "\n</style>\n";
@@ -178,7 +182,7 @@ class InputfieldCroppableImage extends InputfieldImage {
         #$injection = "<div class='croppableImageBasename' data-basename='{$pagefile->basename}'>" . $this->getDisplayBasename($pagefile, $this->thumbnailShowBasenameCharlength['min']) . "</div>";
         $injection = "<div class='croppableImageBasename' data-basename='{$pagefile->basename}'>" . $this->displayShortBasename($pagefile->name, $this->thumbnailShowBasenameCharlength['min']) . "</div>";
         $search = "<div class='ImageData'>";
-        $replace = "{$injection}<div class='ImageData'>";
+        $replace = "{$injection}\n\t\t\t\t<div class='ImageData'>";
         return str_replace($search, $replace, $out);
     }
 
@@ -198,23 +202,23 @@ class InputfieldCroppableImage extends InputfieldImage {
 
 
     protected function ___renderAdditionalFields($pagefile, $id, $n) {
-        if($this->config->debug) {
-            $ImageSizer = new ImageSizer($pagefile->filename);
-            $infos = $ImageSizer->getImageInfo(true);
-            unset($ImageSizer);
-            $value = "<hr class='spacer'/><table class='croppableInspect'>";
-            $value .= "<tr><td class='croppableInspectName'>filename</td><td>" . str_replace($this->config->paths->root, '', $infos['filename']) . "</td></tr>";
-            foreach($infos['info'] as $key => $info) {
-                if($key == 'palette') continue;
-                if($key == 'appmarker' && is_array($info)) $info = implode(' | ', $info);
-                if(is_array($info)) $info = implode(' | ', $info);
-                $value .= "<tr><td class='croppableInspectName'>{$key}</td><td>" . htmlentities($info) . "</td></tr>";
-            }
-            $value .= "</table>";
-            $markup = $this->modules->get("InputfieldMarkup");
-            $markup->set('value', $value);
-            return $markup->render();
-        }
+//        if($this->config->debug) {
+//            $ImageSizer = new ImageSizer($pagefile->filename);
+//            $infos = $ImageSizer->getImageInfo(true);
+//            unset($ImageSizer);
+//            $value = "<hr class='spacer'/><table class='croppableInspect'>";
+//            $value .= "<tr><td class='croppableInspectName'>filename</td><td>" . str_replace($this->config->paths->root, '', $infos['filename']) . "</td></tr>";
+//            foreach($infos['info'] as $key => $info) {
+//                if($key == 'palette') continue;
+//                if($key == 'appmarker' && is_array($info)) $info = implode(' | ', $info);
+//                if(is_array($info)) $info = implode(' | ', $info);
+//                $value .= "<tr><td class='croppableInspectName'>{$key}</td><td>" . htmlentities($info) . "</td></tr>";
+//            }
+//            $value .= "</table>";
+//            $markup = $this->modules->get("InputfieldMarkup");
+//            $markup->set('value', $value);
+//            return $markup->render();
+//        }
     }
 
 
@@ -223,16 +227,19 @@ class InputfieldCroppableImage extends InputfieldImage {
         return "\n<script type='text/javascript'>$(document).ready(function(){croppableRegisterFilterBasename('$parentID');});</script>\n";
     }
 
-    
+
     private function displayShortBasename($str, $max) {
         $cur = strlen($str);
         $max = !is_numeric($max) || 10 > $max ? 10 : $max;
         if($cur <= $max) return $str;
-        $part = intval(($max - 6) / 3 * 2);
-        return substr($str, 0, (2 * $part)) . '...' . substr($str, ($cur - $part));
+        $part = ($max) / 3;
+        $out = substr($str, 0, intval((2 * $part) - 3)) . '...' . substr($str, intval($cur - $part));
+        return $out;
+        #my_var_dump(array($cur, $max, $part, strlen($out)), 1);
+        #die();
     }
 
-    
+
     /**
      * Returns the croplinks HTML string or boolean false. Depending on field
      * configuration.
