@@ -108,12 +108,12 @@ $(function () {
      */
     function croppableRegisterFilterBasename(parentID) {
         parentID = '#' + parentID;
-        $(parentID + ' input#croppablefilter').keyup(function(event) {
+        $(parentID + ' input.croppablefilter').keyup(function(event) {
             var cleaner =  /[^a-z0-9_-]/gi;
-            var filter = $('input#croppablefilter').val();
+            var filter = $('input.croppablefilter').val();
             if(filter.search(cleaner) > -1) {
                 filter = filter.replace(cleaner, '');
-                $(parentID + ' input#croppablefilter').val(filter);
+                $(parentID + ' input.croppablefilter').val(filter);
             }
             if((event.keyCode == 45 || event.keyCode == 46 || event.keyCode == 8) ||
                (event.keyCode >= 48 && event.keyCode <= 57) ||
