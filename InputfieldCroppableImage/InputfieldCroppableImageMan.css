@@ -21,6 +21,12 @@
         background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAIRJREFUeNqUUkEOwCAIE8OP9hGf6g/ZPDRplCH0okZboVTM7GkB5pzRdestARE59lh7hvxVeQgBehNYZBAhxPueLZ+FSh4sIn7zWimbuLeSEmDCPgnFnNltfjTGCMXVc9g7/waJTYr6vibRS1tJwEteWoBJCEzaAy/rpQr2rFf6X3gFGADTg01sfuB1kAAAAABJRU5ErkJggg==') repeat !important;
     }
 
+    .InputfieldImageEdit__imagewrapper div > img {
+        background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAIRJREFUeNqUUkEOwCAIE8OP9hGf6g/ZPDRplCH0okZboVTM7GkB5pzRdestARE59lh7hvxVeQgBehNYZBAhxPueLZ+FSh4sIn7zWimbuLeSEmDCPgnFnNltfjTGCMXVc9g7/waJTYr6vibRS1tJwEteWoBJCEzaAy/rpQr2rFf6X3gFGADTg01sfuB1kAAAAABJRU5ErkJggg==') repeat !important;
+        max-width: 259px;
+        max-height: 259px;
+    }
+
     .gridImage__overflow > img.ciThumbnailContain {
         display: block;
         max-width:100%;
