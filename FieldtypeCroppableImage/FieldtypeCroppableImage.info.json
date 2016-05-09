@@ -4,7 +4,7 @@
     "version": 90,
     "author": "Horst Nogajski",
     "icon": "crop",
-    "requires": "ProcessWire>=3.0.14, PHP>=5.3.8, FieldtypeRangeSlider",
+    "requires": "ProcessWire>=3.0.17, PHP>=5.3.8, FieldtypeRangeSlider",
     "installs": "InputfieldCroppableImage, ProcessCroppableImage",
     "singular": false
 }
