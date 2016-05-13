@@ -1,8 +1,11 @@
 # Croppable Image 3
 
-## Module for ProcessWire 3.0.??+
+## Module for ProcessWire 3.0.17 ONLY !!
 
-## Version 0.9.0 Beta
+## Version 0.9.0 Alpha
+
+## (resetted it back to alpha! There seems to many issues. Also the core imagesfield may change again with the next version. So only use this with PW 3.0.17, not with any later or any previous version.)
+
 
 
 ### How to install
